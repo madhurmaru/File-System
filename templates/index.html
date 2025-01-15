@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>File System Simulator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body>
+    <div class="Top">
+        <h1>Folder: {{ current_path or 'root' }}</h1>
+    
+
+        <div style="display: flex; gap: 20px;"><div class="dropdown">
+            <button class="dropbtn">Add</button>
+            <div class="dropdown-content">
+                
+                    
+                <input type="text" id="item_name" placeholder="Name" required>
+                <button onclick="createItem('file')">File</button>
+                <button onclick="createItem('folder')">Folder</button>
+                </table>
+            </div></div>
+            {% if current_path %}
+                <button style="padding: 10px;
+                padding-right: 2px;
+                background-color: #4CAF50;
+                border: none;
+                height: 38px;
+                margin-top: 18px;
+                cursor: pointer;"><a style="color: white; font-size: 16px; " href="{{ url_for('index', subpath='/' + parent_path) }}">Go Up</a></button>
+            {% endif %}
+        </div>
+    </div>
+
+    <ul id="file-list">
+        <table >
+        <tbody>
+            <tr style=" border: 1px solid; justify-content: space-between;">
+                <td>Item</td>
+                <td>Type</td>
+                <td>Controls</td>
+            </tr>
+            {% for item in items %}
+            <tr style=" border: 1px solid; justify-content: space-between;">
+                <td>
+                    {% if '.' in item %}
+                        <a href="{{ url_for('open_file', subpath=(current_path + '/' + item) | safe) }}">{{ item }}</a>
+                    {% else %}
+                        <a href="{{ url_for('index', subpath=(current_path + '/' + item) | safe) }}">{{ item }}/</a>
+                    {% endif %}                    
+                </td>
+
+                <td>
+                    {% if '.' in item %}
+                        <a>File</a>
+                    {% else %}
+                        <a>Folder</a>
+                    {% endif %}
+                </td>
+
+                <td>
+                    <a href="{{ url_for('delete', subpath=(current_path + '/' + item) | safe) }}"><i data-feather="trash"></i></a>
+                    <a onclick="renameItem('{{ current_path }}', '{{ item }}')" style="cursor: pointer;"><i data-feather="edit"></i></a>
+                </td>
+            </tr>
+            {% endfor %}
+            
+        </tbody>
+    </table>
+    </ul>
+
+    
+
+    <script>
+        feather.replace();
+        function createItem(type) {
+            const itemName = document.getElementById('item_name').value;
+            if (!itemName) {
+                alert("Please enter a name for the " + type);
+                return;
+            }
+            
+            const currentPath = "{{ current_path }}";
+
+            fetch("{{ url_for('create') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `item_type=${type}&item_name=${itemName}&current_path=${currentPath}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear the item name input
+                    document.getElementById('item_name').value = "";
+                    // Refresh the file list
+                    loadFileList();
+                } else {
+                    alert("Error creating " + type);
+                }
+            })
+            .catch(error => {
+                console.error("Error:", error);
+            });
+
+            location.reload();
+        }
+
+        function renameItem(currentPath, oldName) {
+            const newName = prompt("Enter a new name for " + oldName + ":");
+            if (!newName) return;  // Exit if user cancels or enters an empty name
+
+            fetch("{{ url_for('rename') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `current_path=${currentPath}&old_name=${oldName}&new_name=${newName}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadFileList();  // Refresh the file list to reflect the new name
+                } else {
+                    alert("Error renaming item: " + data.error);
+                }
+            })
+            .catch(error => console.error("Error:", error));
+        }
+
+        function loadFileList() {
+            fetch("{{ url_for('index', subpath=current_path) }}")
+                .then(response => response.text())
+                .then(html => {
+                    // Parse the HTML response and update the file list
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+                    const newFileList = doc.getElementById("file-list").innerHTML;
+                    document.getElementById("file-list").innerHTML = newFileList;
+                })
+                .catch(error => console.error("Error loading file list:", error));
+        }
+    </script>
+</body>
+</html>

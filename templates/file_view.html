@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View File</title>
+</head>
+<body>
+    <h1>File Content</h1>
+    <form method="POST" action="{{ url_for('write') }}">
+        <input type="hidden" name="file_path" value="{{ file_path }}">
+        <textarea name="content" rows="10" cols="50">{{ content }}</textarea><br>
+        <button type="submit">Save</button>
+    </form>
+    <br>
+    <a href="{{ url_for('close', subpath=file_path) }}">Close File</a>
+</body>
+</html>
